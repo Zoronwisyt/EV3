@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Edit Vault</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #080810;
+  --surface: #0f0f1a;
+  --surface2: #16162a;
+  --surface3: #1e1e35;
+  --border: #ffffff0e;
+  --border-hover: #ffffff1c;
+  --accent: #6d4aff;
+  --accent2: #a78bfa;
+  --accent3: #38bdf8;
+  --green: #34d399;
+  --red: #f87171;
+  --text: #ede9ff;
+  --muted: #7070a0;
+  --glow: rgba(109,74,255,0.3);
+  --radius: 14px;
+  --radius-sm: 9px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* BG effects */
+.bg-mesh {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 5%, rgba(109,74,255,0.13) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 60% at 90% 90%, rgba(56,189,248,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 55% 45%, rgba(167,139,250,0.05) 0%, transparent 60%);
+}
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.025;
+  background-image: linear-gradient(var(--accent2) 1px, transparent 1px), linear-gradient(90deg, var(--accent2) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+#app { position: relative; z-index: 1; }
+
+/* ── LANDING / HOME ── */
+#landing {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.landing-logo {
+  display: flex; align-items: center; gap: 14px; margin-bottom: 48px;
+}
+.landing-logo-icon {
+  width: 52px; height: 52px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 0 40px var(--glow);
+}
+.landing-logo h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  background: linear-gradient(90deg, #ede9ff, var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  letter-spacing: -0.5px;
+}
+
+.landing-hero h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(36px, 6vw, 64px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -2px;
+  margin-bottom: 20px;
+}
+.landing-hero h2 .grad {
+  background: linear-gradient(135deg, var(--accent2) 0%, var(--accent3) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.landing-hero p {
+  font-size: 17px;
+  color: var(--muted);
+  max-width: 420px;
+  margin: 0 auto 48px;
+  line-height: 1.65;
+  font-weight: 300;
+}
+
+.landing-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  max-width: 360px;
+}
+
+.vault-create-box {
+  background: var(--surface);
+  border: 1px solid var(--border-hover);
+  border-radius: 18px;
+  padding: 28px;
+  width: 100%;
+  text-align: left;
+}
+.vault-create-box h3 {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.vault-create-box p {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.vault-open-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 24px 28px;
+  width: 100%;
+  text-align: left;
+}
+.vault-open-box h3 {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: var(--muted);
+}
+
+.divider {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  color: var(--muted); font-size: 12px;
+}
+.divider::before, .divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* ── VAULT VIEW ── */
+#vault { display: none; }
+
+.vault-wrap { max-width: 1160px; margin: 0 auto; padding: 0 24px 80px; }
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 0 40px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.header-left { display: flex; align-items: center; gap: 14px; }
+
+.logo-mark {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 0 24px var(--glow);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.logo-mark:hover { transform: scale(1.05); }
+
+.vault-info {}
+.vault-name-display {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+}
+.vault-name-display:hover .edit-hint { opacity: 1; }
+.edit-hint { opacity: 0; font-size: 12px; color: var(--muted); transition: opacity 0.2s; }
+
+.vault-owner-badge {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+  display: flex; align-items: center; gap: 6px;
+}
+.owner-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); display: inline-block; }
+.viewer-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent3); display: inline-block; }
+
+.header-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* Share button */
+.share-btn {
+  background: rgba(56,189,248,0.1);
+  border: 1px solid rgba(56,189,248,0.25);
+  color: var(--accent3);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex; align-items: center; gap: 7px;
+  transition: all 0.18s;
+}
+.share-btn:hover { background: rgba(56,189,248,0.18); transform: translateY(-1px); }
+
+/* ── BUTTONS ── */
+.btn {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 9px 18px;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(109,74,255,0.35);
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(109,74,255,0.5); }
+.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--border-hover); background: var(--surface3); }
+.btn-ghost { background: transparent; color: var(--muted); padding: 7px 10px; }
+.btn-ghost:hover { color: var(--text); background: var(--surface2); }
+.btn-danger { background: rgba(248,113,113,0.1); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+.btn-danger:hover { background: rgba(248,113,113,0.18); }
+
+/* ── SEARCH ── */
+.toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 32px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-wrap { flex: 1; min-width: 200px; position: relative; }
+.search-wrap input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  padding: 11px 18px 11px 44px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.search-wrap input::placeholder { color: var(--muted); }
+.search-wrap input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(109,74,255,0.13); }
+.search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 16px; pointer-events: none; }
+
+/* ── GROUPS ── */
+.group-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+  animation: fadeUp 0.3s ease both;
+}
+.group-block:hover { border-color: var(--border-hover); }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.group-header:hover { background: rgba(255,255,255,0.02); }
+
+.group-left { display: flex; align-items: center; gap: 12px; }
+.group-emoji {
+  width: 36px; height: 36px;
+  background: var(--surface2);
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.group-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; }
+.group-desc { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+.group-right { display: flex; align-items: center; gap: 8px; }
+.count-pill {
+  font-size: 11px; font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 20px;
+  background: rgba(109,74,255,0.12);
+  color: var(--accent2);
+  border: 1px solid rgba(109,74,255,0.18);
+}
+.g-actions { display: flex; gap: 4px; }
+.chevron { font-size: 14px; color: var(--muted); transition: transform 0.2s; margin-left: 2px; }
+.group-block.collapsed .chevron { transform: rotate(-90deg); }
+.group-body { border-top: 1px solid var(--border); padding: 12px; }
+.group-block.collapsed .group-body { display: none; }
+
+/* ── CARDS ── */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 10px;
+}
+
+.resource-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.18s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+  animation: fadeUp 0.22s ease both;
+}
+.resource-card::after {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  opacity: 0; transition: opacity 0.2s;
+}
+.resource-card.is-link::after { background: linear-gradient(90deg, var(--accent3), var(--accent2)); }
+.resource-card.is-file::after { background: linear-gradient(90deg, var(--green), var(--accent2)); }
+.resource-card:hover { border-color: var(--border-hover); transform: translateY(-2px); box-shadow: 0 10px 36px rgba(0,0,0,0.35); }
+.resource-card:hover::after { opacity: 1; }
+
+.card-top { display: flex; align-items: flex-start; justify-content: space-between; }
+.card-icon {
+  width: 30px; height: 30px; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.is-link .card-icon { background: rgba(56,189,248,0.1); }
+.is-file .card-icon { background: rgba(52,211,153,0.1); }
+
+.card-btns { display: flex; gap: 3px; opacity: 0; transition: opacity 0.15s; }
+.resource-card:hover .card-btns { opacity: 1; }
+
+.card-type-tag {
+  font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px;
+}
+.is-link .card-type-tag { background: rgba(56,189,248,0.1); color: var(--accent3); }
+.is-file .card-type-tag { background: rgba(52,211,153,0.1); color: var(--green); }
+
+.card-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; line-height: 1.3; word-break: break-word; }
+.card-desc { font-size: 11.5px; color: var(--muted); line-height: 1.55; word-break: break-word; }
+.card-sub { font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.6; }
+.is-link .card-sub { color: var(--accent3); }
+.is-file .card-sub { color: var(--green); }
+
+/* Empty */
+.empty-group { text-align: center; padding: 32px; color: var(--muted); font-size: 13px; }
+.empty-group a { color: var(--accent2); text-decoration: none; }
+.empty-group a:hover { text-decoration: underline; }
+
+/* No groups at all */
+.zero-state {
+  text-align: center; padding: 80px 20px;
+}
+.zero-state .zero-icon { font-size: 60px; margin-bottom: 16px; display: block; }
+.zero-state h2 { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+.zero-state p { color: var(--muted); font-size: 14px; margin-bottom: 28px; line-height: 1.6; }
+
+/* ── UNGROUPED ── */
+.ungrouped-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 24px 0 12px;
+}
+
+/* ── MODAL ── */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.15s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border-hover);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 460px;
+  padding: 28px;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.6);
+  animation: modalPop 0.2s cubic-bezier(.34,1.56,.64,1);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.94) translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+.modal-title { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 800; }
+
+/* Form */
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 11px; font-weight: 500; color: var(--muted); margin-bottom: 5px; letter-spacing: 0.5px; text-transform: uppercase; }
+.field input, .field textarea, .field select {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  padding: 10px 13px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  resize: vertical;
+}
+.field input:focus, .field textarea:focus, .field select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(109,74,255,0.13);
+}
+.field select option { background: var(--surface2); }
+
+/* Type toggle */
+.type-row { display: flex; gap: 8px; margin-bottom: 14px; }
+.type-chip {
+  flex: 1; padding: 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--muted);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 500;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: all 0.15s;
+}
+.type-chip.on-link { border-color: var(--accent3); background: rgba(56,189,248,0.1); color: var(--accent3); }
+.type-chip.on-file { border-color: var(--green); background: rgba(52,211,153,0.1); color: var(--green); }
+
+/* File drop */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 22px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--muted); font-size: 13px;
+  position: relative;
+}
+.drop-zone:hover, .drop-zone.over { border-color: var(--green); background: rgba(52,211,153,0.04); color: var(--green); }
+.drop-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.drop-zone .di { font-size: 26px; margin-bottom: 6px; display: block; }
+.file-chosen { font-size: 11px; color: var(--green); margin-top: 6px; }
+
+/* Emoji picker */
+.emoji-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.e-opt {
+  font-size: 18px; padding: 5px 6px;
+  border-radius: 7px; cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.12s;
+  background: var(--surface2);
+}
+.e-opt:hover { transform: scale(1.15); }
+.e-opt.picked { border-color: var(--accent); background: rgba(109,74,255,0.15); }
+
+.modal-foot { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+
+/* ── SHARE MODAL ── */
+.share-url-row { display: flex; gap: 8px; }
+.share-url-row input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--accent3);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  padding: 10px 13px;
+  outline: none;
+  word-break: break-all;
+}
+
+/* ── VIEWER BANNER ── */
+.viewer-banner {
+  background: linear-gradient(135deg, rgba(56,189,248,0.08), rgba(109,74,255,0.08));
+  border: 1px solid rgba(56,189,248,0.2);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.viewer-banner p { font-size: 13px; color: var(--muted); }
+.viewer-banner strong { color: var(--text); }
+
+/* ── LOADING ── */
+.loader {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 40vh; gap: 16px;
+}
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loader p { color: var(--muted); font-size: 14px; }
+
+/* ── TOAST ── */
+#toastBox { position: fixed; bottom: 24px; right: 24px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--surface2);
+  border: 1px solid var(--border-hover);
+  border-radius: 10px;
+  padding: 11px 16px;
+  font-size: 13px; font-weight: 500;
+  animation: toastIn 0.22s ease;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+  display: flex; align-items: center; gap: 8px;
+  max-width: 280px;
+}
+@keyframes toastIn { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+.toast.ok { border-color: rgba(52,211,153,0.3); }
+.toast.err { border-color: rgba(248,113,113,0.3); }
+
+/* ── INPUT group for landing ── */
+.input-row { display: flex; gap: 8px; }
+.input-row input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.input-row input:focus { border-color: var(--accent); }
+.input-row input::placeholder { color: var(--muted); }
+
+.features {
+  display: flex; gap: 28px; flex-wrap: wrap;
+  margin-top: 60px;
+  text-align: left;
+  max-width: 500px;
+}
+.feat { display: flex; gap: 12px; align-items: flex-start; }
+.feat-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+.feat h4 { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+.feat p { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+@media (max-width: 600px) {
+  .header-right { gap: 6px; }
+  .cards-grid { grid-template-columns: 1fr; }
+  .modal { padding: 20px; }
+  .features { gap: 18px; }
+}
+</style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div class="bg-grid"></div>
+<div id="toastBox"></div>
+<div id="app">
+
+  <!-- ── LANDING ── -->
+  <div id="landing">
+    <div class="landing-logo">
+      <div class="landing-logo-icon">✦</div>
+      <h1>Edit Vault</h1>
+    </div>
+    <div class="landing-hero">
+      <h2>Your editing resources,<br><span class="grad">shared instantly.</span></h2>
+      <p>Create a personal vault for links, files & assets. Share it with anyone via a unique link. They can view and contribute too.</p>
+    </div>
+
+    <div class="landing-actions">
+      <div class="vault-create-box">
+        <h3>✦ Create your vault</h3>
+        <p>Name your vault and get a shareable link in seconds. No account needed.</p>
+        <div class="field" style="margin-bottom:12px">
+          <input type="text" id="landingVaultName" placeholder="My Editing Vault…" maxlength="60" />
+        </div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="createVault()">Create Vault →</button>
+      </div>
+
+      <div class="divider">or</div>
+
+      <div class="vault-open-box">
+        <h3>Open existing vault</h3>
+        <div class="input-row">
+          <input type="text" id="landingVaultId" placeholder="Paste vault ID or link…" />
+          <button class="btn btn-secondary" onclick="openByCode()">Open</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="features">
+      <div class="feat"><span class="feat-icon">🔗</span><div><h4>Links & Files</h4><p>Store URLs and downloadable files side by side.</p></div></div>
+      <div class="feat"><span class="feat-icon">📂</span><div><h4>Groups</h4><p>Organize everything into labeled groups.</p></div></div>
+      <div class="feat"><span class="feat-icon">🔑</span><div><h4>Unique Link</h4><p>Share your vault. Anyone with the link can view & add.</p></div></div>
+    </div>
+  </div>
+
+  <!-- ── VAULT VIEW ── -->
+  <div id="vault">
+    <div class="vault-wrap">
+      <header>
+        <div class="header-left">
+          <div class="logo-mark" onclick="goHome()" title="Home">✦</div>
+          <div class="vault-info">
+            <div class="vault-name-display" id="vaultNameDisplay" onclick="editVaultName()">
+              <span id="vaultNameText">My Vault</span>
+              <span class="edit-hint" id="editHint">✏️</span>
+            </div>
+            <div class="vault-owner-badge" id="ownerBadge"></div>
+          </div>
+        </div>
+        <div class="header-right" id="headerRight"></div>
+      </header>
+
+      <div id="viewerBanner"></div>
+
+      <div class="toolbar">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="Search resources…" oninput="handleSearch()" autocomplete="off" />
+        </div>
+        <div id="toolbarBtns"></div>
+      </div>
+
+      <div id="vaultContent"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── GROUP MODAL ── -->
+<div class="overlay" id="groupModal" style="display:none" onclick="closeModal('groupModal')">
+  <div class="modal" onclick="e=>e.stopPropagation()">
+    <div class="modal-head">
+      <span class="modal-title" id="gmTitle">New Group</span>
+      <button class="btn btn-ghost" onclick="closeModal('groupModal')">✕</button>
+    </div>
+    <div class="field"><label>Name *</label><input type="text" id="gName" maxlength="60" placeholder="e.g. LUTs, Sound FX, Transitions…" /></div>
+    <div class="field"><label>Description</label><input type="text" id="gDesc" maxlength="120" placeholder="Optional description" /></div>
+    <div class="field"><label>Icon</label><div class="emoji-row" id="emojiPicker"></div></div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="closeModal('groupModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveGroup()">Save Group</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── RESOURCE MODAL ── -->
+<div class="overlay" id="resourceModal" style="display:none" onclick="closeModal('resourceModal')">
+  <div class="modal" onclick="e=>e.stopPropagation()">
+    <div class="modal-head">
+      <span class="modal-title" id="rmTitle">Add Resource</span>
+      <button class="btn btn-ghost" onclick="closeModal('resourceModal')">✕</button>
+    </div>
+    <div class="type-row">
+      <button class="type-chip on-link" id="chipLink" onclick="setType('link')">🔗 Link</button>
+      <button class="type-chip" id="chipFile" onclick="setType('file')">📄 File</button>
+    </div>
+    <div class="field"><label>Name *</label><input type="text" id="rName" maxlength="80" placeholder="Resource name…" /></div>
+    <div class="field"><label>Description</label><textarea id="rDesc" rows="2" placeholder="What is this for?"></textarea></div>
+    <div id="linkF"><div class="field"><label>URL *</label><input type="url" id="rUrl" placeholder="https://…" /></div></div>
+    <div id="fileF" style="display:none">
+      <div class="field"><label>File</label>
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="fileInput" onchange="onFileSelect()" />
+          <span class="di">📁</span>
+          <div>Drop a file or click to browse</div>
+          <div class="file-chosen" id="fileChosen"></div>
+        </div>
+      </div>
+    </div>
+    <div class="field"><label>Group</label><select id="rGroup"><option value="">— No Group —</option></select></div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="closeModal('resourceModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveResource()">Save Resource</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── SHARE MODAL ── -->
+<div class="overlay" id="shareModal" style="display:none" onclick="closeModal('shareModal')">
+  <div class="modal" onclick="e=>e.stopPropagation()">
+    <div class="modal-head">
+      <span class="modal-title">Share Your Vault</span>
+      <button class="btn btn-ghost" onclick="closeModal('shareModal')">✕</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">Anyone with this link can view your vault and add resources to it.</p>
+    <div class="field">
+      <label>Your vault link</label>
+      <div class="share-url-row">
+        <input type="text" id="shareUrl" readonly onclick="this.select()" />
+        <button class="btn btn-primary" onclick="copyShareUrl()">Copy</button>
+      </div>
+    </div>
+    <div style="margin-top:14px;padding:12px;background:var(--surface2);border-radius:10px;font-size:12px;color:var(--muted);line-height:1.6">
+      💡 <strong style="color:var(--text)">Tip:</strong> Bookmark your vault link to return to it anytime. The vault ID is also saved in your browser.
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// CONFIG — JSONBin.io (free, no account needed for reads)
+// Uses the public API. Vault data is stored as JSON in the cloud.
+// ─────────────────────────────────────────────
+const JSONBIN_BASE = 'https://api.jsonbin.io/v3';
+// We use a master key for creating bins. Users get read/write via bin ID.
+// IMPORTANT: Replace this with your own JSONBin master key from jsonbin.io
+const MASTER_KEY = '$2a$10$REPLACE_WITH_YOUR_JSONBIN_MASTER_KEY';
+// Collection ID (optional, from JSONBin dashboard). Leave empty to skip.
+const COLLECTION_ID = '';
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let vaultId = null;      // JSONBin bin ID
+let vault = null;        // { name, groups:[], resources:[], nextId:1 }
+let isOwner = false;
+let currentType = 'link';
+let editGroupId = null;
+let editResourceId = null;
+let selFile = null;
+let selFileName = null;
+
+const EMOJIS = ['📁','🎬','🎵','✨','🎨','🔗','⚡','🖼️','🎞️','💡','📦','🛠️','🎛️','🔥','🌈','💎','🌟','🎧','📽️','🎤','🎮','💻','🖥️','🌐','📊'];
+
+// ─────────────────────────────────────────────
+// ROUTING — check URL on load
+// ─────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(location.search);
+  const vid = params.get('v');
+  if (vid) {
+    loadVault(vid, false);
+  } else {
+    // Check if user has an owned vault in localStorage
+    const owned = getOwnedVaults();
+    if (owned.length) {
+      showLandingWithHistory(owned);
+    }
+  }
+});
+
+function getOwnedVaults() {
+  try { return JSON.parse(localStorage.getItem('ev_owned') || '[]'); } catch { return []; }
+}
+function addOwnedVault(id, name) {
+  const arr = getOwnedVaults().filter(v => v.id !== id);
+  arr.unshift({ id, name, ts: Date.now() });
+  localStorage.setItem('ev_owned', JSON.stringify(arr.slice(0, 10)));
+}
+
+function showLandingWithHistory(owned) {
+  // Render recent vaults below the create box
+  const box = document.querySelector('.landing-actions');
+  const recent = document.createElement('div');
+  recent.innerHTML = `<div style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px 24px;text-align:left">
+    <h3 style="font-family:Syne,sans-serif;font-size:13px;font-weight:700;color:var(--muted);margin-bottom:12px">YOUR VAULTS</h3>
+    ${owned.map(v => `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px;font-weight:500">${esc(v.name)}</span>
+      <button class="btn btn-secondary" style="font-size:12px;padding:5px 12px" onclick="loadVault('${v.id}', true)">Open →</button>
+    </div>`).join('')}
+  </div>`;
+  box.appendChild(recent);
+}
+
+// ─────────────────────────────────────────────
+// LANDING ACTIONS
+// ─────────────────────────────────────────────
+async function createVault() {
+  const name = document.getElementById('landingVaultName').value.trim() || 'My Vault';
+  const data = { name, groups: [], resources: [], nextId: 1 };
+  showLandingLoader();
+  try {
+    const res = await fetch(`${JSONBIN_BASE}/b`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': MASTER_KEY,
+        'X-Bin-Name': name,
+        'X-Bin-Private': 'false',
+        ...(COLLECTION_ID ? { 'X-Collection-Id': COLLECTION_ID } : {})
+      },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const json = await res.json();
+    const id = json.metadata.id;
+    addOwnedVault(id, name);
+    await loadVault(id, true);
+  } catch (e) {
+    hideLandingLoader();
+    console.error(e);
+    toast('❌ Could not create vault. Check your JSONBin API key.', 'err');
+  }
+}
+
+function showLandingLoader() {
+  document.querySelector('.vault-create-box').innerHTML = `<div class="loader" style="min-height:80px"><div class="spinner"></div><p>Creating vault…</p></div>`;
+}
+function hideLandingLoader() {
+  location.reload();
+}
+
+function openByCode() {
+  let val = document.getElementById('landingVaultId').value.trim();
+  // Extract ID from URL if pasted
+  if (val.includes('?v=')) val = new URLSearchParams(val.split('?')[1]).get('v');
+  if (!val) { toast('⚠️ Paste a vault ID or link', 'err'); return; }
+  loadVault(val, false);
+}
+
+// ─────────────────────────────────────────────
+// VAULT LOADING
+// ─────────────────────────────────────────────
+async function loadVault(id, owner) {
+  showLoader();
+  try {
+    const res = await fetch(`${JSONBIN_BASE}/b/${id}/latest`, {
+      headers: { 'X-Master-Key': MASTER_KEY }
+    });
+    if (!res.ok) throw new Error('Vault not found');
+    const json = await res.json();
+    vaultId = id;
+    vault = json.record;
+    isOwner = owner;
+
+    // Update URL without reload
+    const url = new URL(location.href);
+    url.searchParams.set('v', id);
+    history.replaceState({}, '', url);
+
+    renderVault();
+  } catch (e) {
+    document.getElementById('landing').style.display = 'flex';
+    document.getElementById('vault').style.display = 'none';
+    toast('❌ Vault not found. Check the ID.', 'err');
+  }
+}
+
+function showLoader() {
+  document.getElementById('landing').style.display = 'none';
+  document.getElementById('vault').style.display = 'block';
+  document.getElementById('vaultContent').innerHTML = `<div class="loader"><div class="spinner"></div><p>Loading vault…</p></div>`;
+}
+
+// ─────────────────────────────────────────────
+// SAVE VAULT (PUT to JSONBin)
+// ─────────────────────────────────────────────
+async function saveVault() {
+  if (!vaultId) return;
+  try {
+    const res = await fetch(`${JSONBIN_BASE}/b/${vaultId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': MASTER_KEY
+      },
+      body: JSON.stringify(vault)
+    });
+    if (!res.ok) throw new Error(await res.text());
+  } catch (e) {
+    toast('❌ Save failed. Check connection.', 'err');
+    throw e;
+  }
+}
+
+// ─────────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────────
+function renderVault() {
+  document.getElementById('landing').style.display = 'none';
+  document.getElementById('vault').style.display = 'block';
+
+  // Vault name
+  document.getElementById('vaultNameText').textContent = vault.name || 'My Vault';
+  document.getElementById('editHint').style.display = isOwner ? '' : 'none';
+
+  // Owner badge
+  const badge = document.getElementById('ownerBadge');
+  badge.innerHTML = isOwner
+    ? `<span class="owner-dot"></span> Your vault`
+    : `<span class="viewer-dot"></span> Viewing shared vault`;
+
+  // Header actions
+  const hr = document.getElementById('headerRight');
+  hr.innerHTML = '';
+  if (isOwner) {
+    hr.innerHTML = `
+      <button class="share-btn" onclick="openShare()">🔗 Share</button>
+      <button class="btn btn-secondary" onclick="openGroupModal()">＋ Group</button>
+      <button class="btn btn-primary" onclick="openResourceModal()">＋ Add Resource</button>`;
+  } else {
+    hr.innerHTML = `
+      <button class="btn btn-secondary" onclick="openResourceModal()">＋ Contribute Resource</button>`;
+  }
+
+  // Viewer banner
+  const vb = document.getElementById('viewerBanner');
+  if (!isOwner) {
+    vb.innerHTML = `<div class="viewer-banner">
+      <p>👀 You're viewing <strong>${esc(vault.name)}</strong>. You can add resources to this vault.</p>
+      <button class="btn btn-secondary" style="font-size:12px;padding:7px 14px" onclick="createVaultFromLanding()">Create your own →</button>
+    </div>`;
+  } else {
+    vb.innerHTML = '';
+  }
+
+  // Toolbar
+  const tb = document.getElementById('toolbarBtns');
+  tb.innerHTML = isOwner
+    ? `<button class="btn btn-secondary" onclick="openGroupModal()">＋ Group</button>`
+    : '';
+
+  renderContent();
+}
+
+function createVaultFromLanding() {
+  goHome();
+}
+
+function renderContent() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const content = document.getElementById('vaultContent');
+
+  if (q) {
+    const hits = vault.resources.filter(r =>
+      r.name.toLowerCase().includes(q) ||
+      (r.desc && r.desc.toLowerCase().includes(q)) ||
+      (r.url && r.url.toLowerCase().includes(q))
+    );
+    content.innerHTML = `<p style="font-size:12px;color:var(--muted);margin-bottom:16px">${hits.length} result${hits.length!==1?'s':''} for "<strong style="color:var(--text)">${esc(q)}</strong>"</p>`;
+    if (hits.length) {
+      const grid = document.createElement('div');
+      grid.className = 'cards-grid';
+      grid.innerHTML = hits.map(r => cardHTML(r)).join('');
+      content.appendChild(grid);
+    } else {
+      content.innerHTML += `<div class="zero-state"><span class="zero-icon">🔎</span><p style="color:var(--muted)">No results found.</p></div>`;
+    }
+    return;
+  }
+
+  if (!vault.groups.length && !vault.resources.length) {
+    content.innerHTML = `<div class="zero-state">
+      <span class="zero-icon">✦</span>
+      <h2>This vault is empty</h2>
+      <p>${isOwner ? 'Create a group to organize your resources,<br>or add your first resource.' : 'No resources here yet. Be the first to add one!'}</p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        ${isOwner ? `<button class="btn btn-secondary" onclick="openGroupModal()">＋ New Group</button>` : ''}
+        <button class="btn btn-primary" onclick="openResourceModal()">＋ Add Resource</button>
+      </div>
+    </div>`;
+    return;
+  }
+
+  let html = '';
+
+  vault.groups.forEach((g, i) => {
+    const res = vault.resources.filter(r => r.groupId === g.id);
+    const col = g.collapsed ? 'collapsed' : '';
+    html += `<div class="group-block ${col}" id="gb-${g.id}" style="animation-delay:${i*0.04}s">
+      <div class="group-header" onclick="toggleGroup(${g.id})">
+        <div class="group-left">
+          <div class="group-emoji">${g.emoji||'📁'}</div>
+          <div>
+            <div class="group-name">${esc(g.name)}</div>
+            ${g.desc ? `<div class="group-desc">${esc(g.desc)}</div>` : ''}
+          </div>
+        </div>
+        <div class="group-right">
+          <span class="count-pill">${res.length}</span>
+          ${isOwner ? `<div class="g-actions" onclick="event.stopPropagation()">
+            <button class="btn btn-ghost" style="font-size:12px;padding:5px 8px" onclick="openGroupModal(${g.id})" title="Edit">✏️</button>
+            <button class="btn btn-ghost" style="font-size:12px;padding:5px 8px" onclick="deleteGroup(${g.id})" title="Delete">🗑️</button>
+          </div>` : ''}
+          <span class="chevron">›</span>
+        </div>
+      </div>
+      <div class="group-body">
+        ${res.length
+          ? `<div class="cards-grid">${res.map(r => cardHTML(r)).join('')}</div>`
+          : `<div class="empty-group">No resources yet. <a href="#" onclick="openResourceModal(null,${g.id});return false">Add one →</a></div>`
+        }
+      </div>
+    </div>`;
+  });
+
+  const ungrouped = vault.resources.filter(r => !r.groupId);
+  if (ungrouped.length) {
+    html += `<div class="ungrouped-label">Ungrouped</div>
+      <div class="cards-grid">${ungrouped.map(r => cardHTML(r)).join('')}</div>`;
+  }
+
+  content.innerHTML = html;
+}
+
+function cardHTML(r) {
+  const isLink = r.type === 'link';
+  const cls = isLink ? 'is-link' : 'is-file';
+  const icon = isLink ? '🔗' : '📄';
+  const tag = isLink ? 'LINK' : 'FILE';
+  const sub = isLink ? esc(r.url||'') : esc(r.fileName||'file');
+  const ownerBtns = isOwner
+    ? `<div class="card-btns">
+        <button class="btn btn-ghost" style="padding:4px 7px;font-size:12px" onclick="event.stopPropagation();openResourceModal(${r.id})" title="Edit">✏️</button>
+        <button class="btn btn-ghost" style="padding:4px 7px;font-size:12px" onclick="event.stopPropagation();delRes(${r.id})" title="Delete">🗑️</button>
+      </div>`
+    : '';
+
+  return `<div class="resource-card ${cls}" onclick="openRes(${r.id})" title="${isLink ? 'Open link' : 'Download file'}">
+    <div class="card-top">
+      <div class="card-icon">${icon}</div>
+      ${ownerBtns}
+    </div>
+    <div>
+      <span class="card-type-tag">${tag}</span>
+      <div class="card-name">${esc(r.name)}</div>
+      ${r.desc ? `<div class="card-desc">${esc(r.desc)}</div>` : ''}
+      <div class="card-sub">${sub}</div>
+    </div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────
+// ACTIONS
+// ─────────────────────────────────────────────
+function openRes(id) {
+  const r = vault.resources.find(x => x.id === id);
+  if (!r) return;
+  if (r.type === 'link') {
+    window.open(r.url, '_blank', 'noopener');
+  } else if (r.fileData) {
+    const a = document.createElement('a');
+    a.href = r.fileData;
+    a.download = r.fileName || 'file';
+    a.click();
+    toast('⬇️ Downloading…', 'ok');
+  }
+}
+
+function toggleGroup(id) {
+  const g = vault.groups.find(x => x.id === id);
+  if (!g) return;
+  g.collapsed = !g.collapsed;
+  const el = document.getElementById(`gb-${id}`);
+  if (el) el.classList.toggle('collapsed', g.collapsed);
+  // Save silently (don't block UI)
+  saveVault().catch(() => {});
+}
+
+async function deleteGroup(id) {
+  if (!confirm('Delete this group? Resources inside become ungrouped.')) return;
+  vault.resources.forEach(r => { if (r.groupId === id) r.groupId = null; });
+  vault.groups = vault.groups.filter(g => g.id !== id);
+  await saveVault();
+  renderContent();
+  toast('🗑️ Group deleted', 'ok');
+}
+
+async function delRes(id) {
+  if (!confirm('Delete this resource?')) return;
+  vault.resources = vault.resources.filter(r => r.id !== id);
+  await saveVault();
+  renderContent();
+  toast('🗑️ Resource deleted', 'ok');
+}
+
+function handleSearch() { renderContent(); }
+
+function goHome() {
+  const url = new URL(location.href);
+  url.searchParams.delete('v');
+  history.replaceState({}, '', url);
+  location.reload();
+}
+
+async function editVaultName() {
+  if (!isOwner) return;
+  const current = vault.name;
+  const newName = prompt('Rename vault:', current);
+  if (!newName || newName.trim() === current) return;
+  vault.name = newName.trim();
+  document.getElementById('vaultNameText').textContent = vault.name;
+  addOwnedVault(vaultId, vault.name);
+  await saveVault();
+  toast('✅ Vault renamed', 'ok');
+}
+
+// ─────────────────────────────────────────────
+// GROUP MODAL
+// ─────────────────────────────────────────────
+function openGroupModal(id = null) {
+  editGroupId = id;
+  const g = id ? vault.groups.find(x => x.id === id) : null;
+  document.getElementById('gmTitle').textContent = id ? 'Edit Group' : 'New Group';
+  document.getElementById('gName').value = g ? g.name : '';
+  document.getElementById('gDesc').value = g ? (g.desc || '') : '';
+
+  const picker = document.getElementById('emojiPicker');
+  picker.innerHTML = EMOJIS.map(e =>
+    `<span class="e-opt ${(g?.emoji === e) || (!g && e==='📁') ? 'picked' : ''}" onclick="pickEmoji(this,'${e}')">${e}</span>`
+  ).join('');
+
+  showModal('groupModal');
+  setTimeout(() => document.getElementById('gName').focus(), 80);
+}
+
+function pickEmoji(el, e) {
+  document.querySelectorAll('.e-opt').forEach(x => x.classList.remove('picked'));
+  el.classList.add('picked');
+}
+
+async function saveGroup() {
+  const name = document.getElementById('gName').value.trim();
+  if (!name) { toast('⚠️ Name required', 'err'); return; }
+  const desc = document.getElementById('gDesc').value.trim();
+  const emoji = document.querySelector('.e-opt.picked')?.textContent || '📁';
+
+  if (editGroupId) {
+    const g = vault.groups.find(x => x.id === editGroupId);
+    if (g) { g.name = name; g.desc = desc; g.emoji = emoji; }
+    toast('✅ Group updated', 'ok');
+  } else {
+    vault.groups.push({ id: vault.nextId++, name, desc, emoji, collapsed: false });
+    toast('✅ Group created', 'ok');
+  }
+
+  closeModal('groupModal');
+  await saveVault();
+  renderContent();
+}
+
+// ─────────────────────────────────────────────
+// RESOURCE MODAL
+// ─────────────────────────────────────────────
+function openResourceModal(id = null, groupId = null) {
+  editResourceId = id;
+  const r = id ? vault.resources.find(x => x.id === id) : null;
+  document.getElementById('rmTitle').textContent = id ? 'Edit Resource' : (isOwner ? 'Add Resource' : 'Contribute Resource');
+  document.getElementById('rName').value = r ? r.name : '';
+  document.getElementById('rDesc').value = r ? (r.desc || '') : '';
+  document.getElementById('rUrl').value = r ? (r.url || '') : '';
+  document.getElementById('fileChosen').textContent = r?.fileName || '';
+  selFile = r ? r.fileData : null;
+  selFileName = r ? r.fileName : null;
+
+  // Group select
+  const sel = document.getElementById('rGroup');
+  sel.innerHTML = '<option value="">— No Group —</option>' +
+    vault.groups.map(g => `<option value="${g.id}"${(r?.groupId===g.id||groupId===g.id)?'selected':''}>${esc(g.name)}</option>`).join('');
+  if (!r && groupId) sel.value = groupId;
+
+  setType(r ? r.type : 'link');
+  showModal('resourceModal');
+  setTimeout(() => document.getElementById('rName').focus(), 80);
+}
+
+function setType(t) {
+  currentType = t;
+  document.getElementById('linkF').style.display = t === 'link' ? '' : 'none';
+  document.getElementById('fileF').style.display = t === 'file' ? '' : 'none';
+  document.getElementById('chipLink').className = 'type-chip' + (t==='link'?' on-link':'');
+  document.getElementById('chipFile').className = 'type-chip' + (t==='file'?' on-file':'');
+}
+
+function onFileSelect() {
+  const file = document.getElementById('fileInput').files[0];
+  if (!file) return;
+  if (file.size > 8 * 1024 * 1024) { toast('⚠️ Max 8MB per file', 'err'); return; }
+  selFileName = file.name;
+  document.getElementById('fileChosen').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => { selFile = e.target.result; };
+  reader.readAsDataURL(file);
+}
+
+async function saveResource() {
+  const name = document.getElementById('rName').value.trim();
+  if (!name) { toast('⚠️ Name required', 'err'); return; }
+  const url = document.getElementById('rUrl').value.trim();
+  if (currentType === 'link' && !url) { toast('⚠️ URL required', 'err'); return; }
+  if (currentType === 'file' && !selFile && !editResourceId) { toast('⚠️ Please select a file', 'err'); return; }
+
+  const desc = document.getElementById('rDesc').value.trim();
+  const groupId = parseInt(document.getElementById('rGroup').value) || null;
+
+  if (editResourceId) {
+    const r = vault.resources.find(x => x.id === editResourceId);
+    if (r) {
+      Object.assign(r, { name, desc, type: currentType, groupId,
+        url: currentType==='link' ? url : null,
+        ...(currentType==='file' && selFile ? { fileData: selFile, fileName: selFileName } : {})
+      });
+    }
+    toast('✅ Resource updated', 'ok');
+  } else {
+    vault.resources.push({
+      id: vault.nextId++, name, desc, type: currentType, groupId,
+      url: currentType==='link' ? url : null,
+      fileData: currentType==='file' ? selFile : null,
+      fileName: currentType==='file' ? selFileName : null,
+      addedAt: Date.now()
+    });
+    toast('✅ Resource added', 'ok');
+  }
+
+  closeModal('resourceModal');
+  await saveVault();
+  renderContent();
+}
+
+// ─────────────────────────────────────────────
+// SHARE
+// ─────────────────────────────────────────────
+function openShare() {
+  const url = `${location.origin}${location.pathname}?v=${vaultId}`;
+  document.getElementById('shareUrl').value = url;
+  showModal('shareModal');
+}
+
+function copyShareUrl() {
+  const url = document.getElementById('shareUrl').value;
+  navigator.clipboard.writeText(url).then(() => toast('✅ Link copied!', 'ok'));
+}
+
+// ─────────────────────────────────────────────
+// MODAL UTILS
+// ─────────────────────────────────────────────
+function showModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') ['groupModal','resourceModal','shareModal'].forEach(closeModal);
+  if (e.key === '/' && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) {
+    e.preventDefault();
+    document.getElementById('searchInput')?.focus();
+  }
+});
+
+// ─────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────
+function toast(msg, type='ok') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toastBox').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ─────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
