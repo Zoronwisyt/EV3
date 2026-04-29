@@ -150,6 +150,25 @@ header { display: flex; align-items: center; justify-content: space-between; pad
 .zero-state p { color: var(--muted); font-size: 14px; margin-bottom: 24px; line-height: 1.6; }
 .ungrouped-label { font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin: 22px 0 12px; }
 
+/* SUBGROUPS */
+.subgroup-block { background: var(--surface3); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; overflow: hidden; transition: border-color 0.2s; }
+.subgroup-block:hover { border-color: var(--border-hover); }
+.subgroup-hdr { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; cursor: pointer; user-select: none; transition: background 0.15s; }
+.subgroup-hdr:hover { background: rgba(255,255,255,0.02); }
+.sg-left { display: flex; align-items: center; gap: 9px; }
+.sg-emoji { width: 28px; height: 28px; background: var(--surface2); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.sg-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; }
+.sg-desc { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.sg-right { display: flex; align-items: center; gap: 6px; }
+.sg-count { font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 20px; background: rgba(109,74,255,0.1); color: var(--accent2); border: 1px solid rgba(109,74,255,0.15); }
+.sg-acts { display: flex; gap: 2px; }
+.sg-chevron { font-size: 12px; color: var(--muted); transition: transform 0.2s; }
+.subgroup-block.collapsed .sg-chevron { transform: rotate(-90deg); }
+.subgroup-body { border-top: 1px solid var(--border); padding: 10px; }
+.subgroup-block.collapsed .subgroup-body { display: none; }
+.add-subgroup-btn { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); background: transparent; border: 1px dashed var(--border); border-radius: 8px; padding: 7px 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; margin-top: 8px; width: 100%; justify-content: center; }
+.add-subgroup-btn:hover { color: var(--accent2); border-color: var(--accent2); background: rgba(109,74,255,0.05); }
+
 /* MODAL */
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(8px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; animation: fadeIn 0.15s ease; }
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
@@ -293,6 +312,7 @@ header { display: flex; align-items: center; justify-content: space-between; pad
     <div class="field"><label>Name *</label><input type="text" id="gName" maxlength="60" placeholder="e.g. LUTs, Transitions, Sound FX…" /></div>
     <div class="field"><label>Description</label><input type="text" id="gDesc" maxlength="120" placeholder="Optional" /></div>
     <div class="field"><label>Icon</label><div class="emoji-row" id="emojiPicker"></div></div>
+    <div class="field"><label>Parent Group <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(optional — makes this a subgroup)</span></label><select id="gParent"><option value="">— None (top-level group) —</option></select></div>
     <div class="modal-foot">
       <button class="btn btn-secondary" onclick="closeModal('groupModal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveGroup()">Save Group</button>
@@ -623,30 +643,71 @@ function renderContent() {
     return;
   }
   let html='';
-  vault.groups.forEach((g,i)=>{
-    const res=vault.resources.filter(r=>r.groupId===g.id);
-    html+=`<div class="group-block ${g.collapsed?'collapsed':''}" id="gb-${g.id}" style="animation-delay:${i*0.04}s">
-      <div class="group-hdr" onclick="toggleGroup(${g.id})">
-        <div class="g-left"><div class="g-emoji">${g.emoji||'📁'}</div>
-          <div><div class="g-name">${esc(g.name)}</div>${g.desc?`<div class="g-desc">${esc(g.desc)}</div>`:''}</div>
-        </div>
-        <div class="g-right"><span class="count-pill">${res.length}</span>
-          ${isOwner?`<div class="g-acts" onclick="event.stopPropagation()">
-            <button class="btn btn-ghost" style="padding:5px 8px;font-size:12px" onclick="openGroupModal(${g.id})">✏️</button>
-            <button class="btn btn-ghost" style="padding:5px 8px;font-size:12px" onclick="deleteGroup(${g.id})">🗑️</button>
-          </div>`:''}
-          <span class="chevron">›</span>
-        </div>
-      </div>
-      <div class="group-body">${res.length
-        ?`<div class="cards-grid">${res.map(cardHTML).join('')}</div>`
-        :`<div class="empty-group">No resources yet. <a href="#" onclick="openResourceModal(null,${g.id});return false">Add one →</a></div>`}
-      </div>
-    </div>`;
+  // Only render top-level groups here; subgroups render inside their parent
+  const topGroups = vault.groups.filter(g=>!g.parentId);
+  topGroups.forEach((g,i)=>{
+    html += groupBlockHTML(g, i);
   });
   const ung=vault.resources.filter(r=>!r.groupId);
   if(ung.length) html+=`<div class="ungrouped-label">Ungrouped</div><div class="cards-grid">${ung.map(cardHTML).join('')}</div>`;
   el.innerHTML=html;
+}
+
+function groupBlockHTML(g, i=0) {
+  const res = vault.resources.filter(r=>r.groupId===g.id);
+  const subgroups = vault.groups.filter(sg=>sg.parentId===g.id);
+  const totalCount = res.length + subgroups.reduce((acc,sg)=>acc+vault.resources.filter(r=>r.groupId===sg.id).length,0);
+
+  // Build subgroup HTML
+  let subHTML = subgroups.map(sg => subgroupBlockHTML(sg)).join('');
+
+  // Add subgroup button for owner
+  const addSubBtn = isOwner
+    ? `<button class="add-subgroup-btn" onclick="openGroupModal(null,${g.id})">＋ Add Subgroup</button>`
+    : '';
+
+  const bodyContent = (res.length || subgroups.length)
+    ? `${subHTML}${res.length?`<div class="cards-grid" style="margin-top:${subgroups.length?'8px':'0'}">${res.map(cardHTML).join('')}</div>`:''}${addSubBtn}`
+    : `<div class="empty-group">No resources yet. <a href="#" onclick="openResourceModal(null,${g.id});return false">Add one →</a></div>${addSubBtn}`;
+
+  return `<div class="group-block ${g.collapsed?'collapsed':''}" id="gb-${g.id}" style="animation-delay:${i*0.04}s">
+    <div class="group-hdr" onclick="toggleGroup(${g.id})">
+      <div class="g-left"><div class="g-emoji">${g.emoji||'📁'}</div>
+        <div><div class="g-name">${esc(g.name)}</div>${g.desc?`<div class="g-desc">${esc(g.desc)}</div>`:''}</div>
+      </div>
+      <div class="g-right"><span class="count-pill">${totalCount}</span>
+        ${isOwner?`<div class="g-acts" onclick="event.stopPropagation()">
+          <button class="btn btn-ghost" style="padding:5px 8px;font-size:12px" onclick="openGroupModal(${g.id})">✏️</button>
+          <button class="btn btn-ghost" style="padding:5px 8px;font-size:12px" onclick="deleteGroup(${g.id})">🗑️</button>
+        </div>`:''}
+        <span class="chevron">›</span>
+      </div>
+    </div>
+    <div class="group-body">${bodyContent}</div>
+  </div>`;
+}
+
+function subgroupBlockHTML(sg) {
+  const res = vault.resources.filter(r=>r.groupId===sg.id);
+  return `<div class="subgroup-block ${sg.collapsed?'collapsed':''}" id="gb-${sg.id}">
+    <div class="subgroup-hdr" onclick="toggleGroup(${sg.id})">
+      <div class="sg-left"><div class="sg-emoji">${sg.emoji||'📁'}</div>
+        <div><div class="sg-name">${esc(sg.name)}</div>${sg.desc?`<div class="sg-desc">${esc(sg.desc)}</div>`:''}</div>
+      </div>
+      <div class="sg-right"><span class="sg-count">${res.length}</span>
+        ${isOwner?`<div class="sg-acts" onclick="event.stopPropagation()">
+          <button class="btn btn-ghost" style="padding:3px 6px;font-size:11px" onclick="openGroupModal(${sg.id})">✏️</button>
+          <button class="btn btn-ghost" style="padding:3px 6px;font-size:11px" onclick="deleteGroup(${sg.id})">🗑️</button>
+        </div>`:''}
+        <span class="sg-chevron">›</span>
+      </div>
+    </div>
+    <div class="subgroup-body">
+      ${res.length
+        ? `<div class="cards-grid">${res.map(cardHTML).join('')}</div>`
+        : `<div class="empty-group" style="padding:16px">No resources. <a href="#" onclick="openResourceModal(null,${sg.id});return false">Add one →</a></div>`}
+    </div>
+  </div>`;
 }
 
 function cardHTML(r) {
@@ -690,9 +751,16 @@ function toggleGroup(id) {
   scheduleSave();
 }
 function deleteGroup(id) {
-  if(!confirm('Delete this group? Resources will become ungrouped.')) return;
-  vault.resources.forEach(r=>{ if(r.groupId===id) r.groupId=null; });
-  vault.groups=vault.groups.filter(g=>g.id!==id);
+  const g = vault.groups.find(x=>x.id===id);
+  const isParent = vault.groups.some(x=>x.parentId===id);
+  const msg = isParent
+    ? 'Delete this group and all its subgroups? Resources will become ungrouped.'
+    : 'Delete this group? Resources will become ungrouped.';
+  if(!confirm(msg)) return;
+  // Collect IDs to remove (group + any subgroups)
+  const toRemove = new Set([id, ...vault.groups.filter(x=>x.parentId===id).map(x=>x.id)]);
+  vault.resources.forEach(r=>{ if(toRemove.has(r.groupId)) r.groupId=null; });
+  vault.groups=vault.groups.filter(g=>!toRemove.has(g.id));
   scheduleSave(); renderContent(); toast('🗑️ Group deleted','ok');
 }
 async function deleteRes(id) {
@@ -724,7 +792,7 @@ function goHome() {
 // ═══════════════════════════════════════════════════
 //  GROUP MODAL
 // ═══════════════════════════════════════════════════
-function openGroupModal(id=null) {
+function openGroupModal(id=null, presetParentId=null) {
   editGid=id;
   const g=id?vault.groups.find(x=>x.id===id):null;
   document.getElementById('gmTitle').textContent=id?'Edit Group':'New Group';
@@ -733,6 +801,11 @@ function openGroupModal(id=null) {
   document.getElementById('emojiPicker').innerHTML=EMOJIS.map(e=>
     `<span class="e-opt ${(g?.emoji===e||(!g&&e==='📁'))?'picked':''}" onclick="pickEmoji(this)">${e}</span>`
   ).join('');
+  // Populate parent dropdown — only top-level groups can be parents
+  const topGroups = vault.groups.filter(x=>!x.parentId && x.id !== id);
+  const sel = document.getElementById('gParent');
+  sel.innerHTML = '<option value="">— None (top-level group) —</option>' +
+    topGroups.map(tg=>`<option value="${tg.id}" ${(g?.parentId===tg.id||(presetParentId===tg.id&&!g))?'selected':''}>${esc(tg.emoji||'📁')} ${esc(tg.name)}</option>`).join('');
   showModal('groupModal'); setTimeout(()=>document.getElementById('gName').focus(),80);
 }
 function pickEmoji(el) { document.querySelectorAll('.e-opt').forEach(x=>x.classList.remove('picked')); el.classList.add('picked'); }
@@ -741,8 +814,15 @@ function saveGroup() {
   if(!name){toast('⚠️ Name required','err');return;}
   const desc=document.getElementById('gDesc').value.trim();
   const emoji=document.querySelector('.e-opt.picked')?.textContent||'📁';
-  if(editGid){const g=vault.groups.find(x=>x.id===editGid);if(g)Object.assign(g,{name,desc,emoji});toast('✅ Group updated','ok');}
-  else{vault.groups.push({id:vault.nextId++,name,desc,emoji,collapsed:false});toast('✅ Group created','ok');}
+  const parentId=parseInt(document.getElementById('gParent').value)||null;
+  if(editGid){
+    const g=vault.groups.find(x=>x.id===editGid);
+    if(g)Object.assign(g,{name,desc,emoji,parentId});
+    toast('✅ Group updated','ok');
+  } else {
+    vault.groups.push({id:vault.nextId++,name,desc,emoji,parentId,collapsed:false});
+    toast('✅ Group created','ok');
+  }
   closeModal('groupModal'); scheduleSave(); renderContent();
 }
 
@@ -761,9 +841,16 @@ function openResourceModal(id=null,groupId=null) {
   document.getElementById('uploadProgress').style.display='none';
   document.getElementById('uploadBar').style.width='0%';
   const sel=document.getElementById('rGroup');
-  sel.innerHTML='<option value="">— No Group —</option>'+vault.groups.map(g=>
-    `<option value="${g.id}" ${(r?.groupId===g.id||(!r&&groupId===g.id))?'selected':''}>${esc(g.name)}</option>`
-  ).join('');
+  // Build grouped options: top-level first, then their subgroups indented
+  const topGs = vault.groups.filter(g=>!g.parentId);
+  let opts = '<option value="">— No Group —</option>';
+  topGs.forEach(tg => {
+    opts += `<option value="${tg.id}" ${(r?.groupId===tg.id||(!r&&groupId===tg.id))?'selected':''}>${esc(tg.emoji||'📁')} ${esc(tg.name)}</option>`;
+    vault.groups.filter(sg=>sg.parentId===tg.id).forEach(sg => {
+      opts += `<option value="${sg.id}" ${(r?.groupId===sg.id||(!r&&groupId===sg.id))?'selected':''}>&nbsp;&nbsp;&nbsp;↳ ${esc(sg.emoji||'📁')} ${esc(sg.name)}</option>`;
+    });
+  });
+  sel.innerHTML = opts;
   setResType(r?.type||'link');
   showModal('resourceModal'); setTimeout(()=>document.getElementById('rName').focus(),80);
 }
