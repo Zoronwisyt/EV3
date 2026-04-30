@@ -150,24 +150,24 @@ header { display: flex; align-items: center; justify-content: space-between; pad
 .zero-state p { color: var(--muted); font-size: 14px; margin-bottom: 24px; line-height: 1.6; }
 .ungrouped-label { font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin: 22px 0 12px; }
 
-/* SUBGROUPS */
-.subgroup-block { background: var(--surface3); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; overflow: hidden; transition: border-color 0.2s; }
-.subgroup-block:hover { border-color: var(--border-hover); }
-.subgroup-hdr { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; cursor: pointer; user-select: none; transition: background 0.15s; }
-.subgroup-hdr:hover { background: rgba(255,255,255,0.02); }
-.sg-left { display: flex; align-items: center; gap: 9px; }
-.sg-emoji { width: 28px; height: 28px; background: var(--surface2); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
-.sg-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; }
-.sg-desc { font-size: 10px; color: var(--muted); margin-top: 1px; }
-.sg-right { display: flex; align-items: center; gap: 6px; }
-.sg-count { font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 20px; background: rgba(109,74,255,0.1); color: var(--accent2); border: 1px solid rgba(109,74,255,0.15); }
-.sg-acts { display: flex; gap: 2px; }
-.sg-chevron { font-size: 12px; color: var(--muted); transition: transform 0.2s; }
-.subgroup-block.collapsed .sg-chevron { transform: rotate(-90deg); }
-.subgroup-body { border-top: 1px solid var(--border); padding: 10px; }
-.subgroup-block.collapsed .subgroup-body { display: none; }
-.add-subgroup-btn { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); background: transparent; border: 1px dashed var(--border); border-radius: 8px; padding: 7px 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; margin-top: 8px; width: 100%; justify-content: center; }
-.add-subgroup-btn:hover { color: var(--accent2); border-color: var(--accent2); background: rgba(109,74,255,0.05); }
+/* NESTED GROUPS — depth-aware via inline styles, single class handles all levels */
+.nested-group { border-radius: 10px; margin-bottom: 8px; overflow: hidden; transition: border-color 0.2s; border: 1px solid var(--border); }
+.nested-group:hover { border-color: var(--border-hover); }
+.nested-hdr { display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; transition: background 0.15s; }
+.nested-hdr:hover { background: rgba(255,255,255,0.025); }
+.nh-left { display: flex; align-items: center; gap: 10px; }
+.nh-emoji { background: rgba(255,255,255,0.04); border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.nh-name { font-family: 'Syne', sans-serif; font-weight: 700; }
+.nh-desc { color: var(--muted); margin-top: 1px; }
+.nh-right { display: flex; align-items: center; gap: 6px; }
+.nh-count { font-weight: 600; border-radius: 20px; background: rgba(109,74,255,0.1); color: var(--accent2); border: 1px solid rgba(109,74,255,0.15); }
+.nh-acts { display: flex; gap: 2px; }
+.nh-chevron { color: var(--muted); transition: transform 0.2s; }
+.nested-group.collapsed .nh-chevron { transform: rotate(-90deg); }
+.nested-body { border-top: 1px solid var(--border); }
+.nested-group.collapsed .nested-body { display: none; }
+.add-sub-btn { display: flex; align-items: center; gap: 6px; color: var(--muted); background: transparent; border: 1px dashed var(--border); border-radius: 8px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 500; transition: all 0.15s; width: 100%; justify-content: center; }
+.add-sub-btn:hover { color: var(--accent2); border-color: var(--accent2); background: rgba(109,74,255,0.05); }
 
 /* MODAL */
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(8px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; animation: fadeIn 0.15s ease; }
@@ -643,70 +643,86 @@ function renderContent() {
     return;
   }
   let html='';
-  // Only render top-level groups here; subgroups render inside their parent
+  // Only render root groups — children render recursively inside their parent
   const topGroups = vault.groups.filter(g=>!g.parentId);
   topGroups.forEach((g,i)=>{
-    html += groupBlockHTML(g, i);
+    html += renderGroupHTML(g, 0);
   });
   const ung=vault.resources.filter(r=>!r.groupId);
   if(ung.length) html+=`<div class="ungrouped-label">Ungrouped</div><div class="cards-grid">${ung.map(cardHTML).join('')}</div>`;
   el.innerHTML=html;
 }
 
-function groupBlockHTML(g, i=0) {
-  const res = vault.resources.filter(r=>r.groupId===g.id);
-  const subgroups = vault.groups.filter(sg=>sg.parentId===g.id);
-  const totalCount = res.length + subgroups.reduce((acc,sg)=>acc+vault.resources.filter(r=>r.groupId===sg.id).length,0);
-
-  // Build subgroup HTML
-  let subHTML = subgroups.map(sg => subgroupBlockHTML(sg)).join('');
-
-  // Add subgroup button for owner
-  const addSubBtn = isOwner
-    ? `<button class="add-subgroup-btn" onclick="openGroupModal(null,${g.id})">＋ Add Subgroup</button>`
-    : '';
-
-  const bodyContent = (res.length || subgroups.length)
-    ? `${subHTML}${res.length?`<div class="cards-grid" style="margin-top:${subgroups.length?'8px':'0'}">${res.map(cardHTML).join('')}</div>`:''}${addSubBtn}`
-    : `<div class="empty-group">No resources yet. <a href="#" onclick="openResourceModal(null,${g.id});return false">Add one →</a></div>${addSubBtn}`;
-
-  return `<div class="group-block ${g.collapsed?'collapsed':''}" id="gb-${g.id}" style="animation-delay:${i*0.04}s">
-    <div class="group-hdr" onclick="toggleGroup(${g.id})">
-      <div class="g-left"><div class="g-emoji">${g.emoji||'📁'}</div>
-        <div><div class="g-name">${esc(g.name)}</div>${g.desc?`<div class="g-desc">${esc(g.desc)}</div>`:''}</div>
-      </div>
-      <div class="g-right"><span class="count-pill">${totalCount}</span>
-        ${isOwner?`<div class="g-acts" onclick="event.stopPropagation()">
-          <button class="btn btn-ghost" style="padding:5px 8px;font-size:12px" onclick="openGroupModal(${g.id})">✏️</button>
-          <button class="btn btn-ghost" style="padding:5px 8px;font-size:12px" onclick="deleteGroup(${g.id})">🗑️</button>
-        </div>`:''}
-        <span class="chevron">›</span>
-      </div>
-    </div>
-    <div class="group-body">${bodyContent}</div>
-  </div>`;
+// ── Recursive group renderer — works for any nesting depth ──
+function countAllDescendants(gid) {
+  // Count resources in this group + all nested children recursively
+  let count = vault.resources.filter(r=>r.groupId===gid).length;
+  vault.groups.filter(sg=>sg.parentId===gid).forEach(sg=>{ count += countAllDescendants(sg.id); });
+  return count;
 }
 
-function subgroupBlockHTML(sg) {
-  const res = vault.resources.filter(r=>r.groupId===sg.id);
-  return `<div class="subgroup-block ${sg.collapsed?'collapsed':''}" id="gb-${sg.id}">
-    <div class="subgroup-hdr" onclick="toggleGroup(${sg.id})">
-      <div class="sg-left"><div class="sg-emoji">${sg.emoji||'📁'}</div>
-        <div><div class="sg-name">${esc(sg.name)}</div>${sg.desc?`<div class="sg-desc">${esc(sg.desc)}</div>`:''}</div>
+function getAllDescendantIds(gid, acc=[]) {
+  acc.push(gid);
+  vault.groups.filter(sg=>sg.parentId===gid).forEach(sg=>getAllDescendantIds(sg.id, acc));
+  return acc;
+}
+
+function renderGroupHTML(g, depth=0) {
+  const isRoot = depth === 0;
+  const res = vault.resources.filter(r=>r.groupId===g.id);
+  const children = vault.groups.filter(sg=>sg.parentId===g.id);
+  const totalCount = countAllDescendants(g.id);
+
+  // Visual scaling by depth
+  const pad     = isRoot ? '16px 20px' : `${Math.max(8,14-depth*2)}px ${Math.max(10,16-depth*2)}px`;
+  const emojiSz = Math.max(22, 36 - depth * 4);
+  const fontSize= Math.max(11, 14 - depth * 0.5);
+  const descSize= Math.max(9,  11 - depth * 0.5);
+  const bgAlpha = Math.min(0.12 + depth * 0.04, 0.28);
+  const bg      = isRoot ? 'var(--surface)' : `rgba(255,255,255,${bgAlpha * 0.04})`;
+  const borderR = isRoot ? 'var(--radius)' : '10px';
+  const indent  = depth > 0 ? `margin-left:${Math.min(depth*12,36)}px;` : '';
+  const animDelay = isRoot ? '' : '';
+  const countSz = Math.max(9, 11 - depth);
+  const countPad = depth > 1 ? '1px 6px' : '2px 9px';
+  const btnPad  = depth > 1 ? '3px 5px' : '5px 8px';
+  const btnSize = depth > 1 ? '11px' : '12px';
+  const chevSz  = depth > 0 ? '12px' : '14px';
+  const bodyPad = depth > 1 ? '8px' : '12px';
+
+  const childrenHTML = children.map(c => renderGroupHTML(c, depth+1)).join('');
+  const addSubBtn = isOwner
+    ? `<button class="add-sub-btn" style="font-size:${Math.max(10,12-depth)}px;padding:${depth>1?'5px 8px':'7px 12px'};margin-top:8px" onclick="openGroupModal(null,${g.id})">＋ Subgroup</button>`
+    : '';
+
+  const hasContent = res.length || children.length;
+  const bodyContent = hasContent
+    ? `${childrenHTML}${res.length ? `<div class="cards-grid" style="margin-top:${children.length?'8px':'0'}">${res.map(cardHTML).join('')}</div>` : ''}${addSubBtn}`
+    : `<div class="empty-group" style="padding:${depth>0?'12px 16px':'28px'};font-size:${descSize}px">No resources. <a href="#" onclick="openResourceModal(null,${g.id});return false">Add one →</a></div>${addSubBtn}`;
+
+  const cls = isRoot ? `group-block ${g.collapsed?'collapsed':''}` : `nested-group ${g.collapsed?'collapsed':''}`;
+  const hdrCls = isRoot ? 'group-hdr' : 'nested-hdr';
+  const bodyCls = isRoot ? 'group-body' : 'nested-body';
+
+  return `<div class="${cls}" id="gb-${g.id}" style="${indent}background:${bg};border-radius:${borderR};margin-bottom:${isRoot?'14px':'8px'}">
+    <div class="${hdrCls}" style="padding:${pad}" onclick="toggleGroup(${g.id})">
+      <div class="nh-left">
+        <div class="nh-emoji" style="width:${emojiSz}px;height:${emojiSz}px;font-size:${emojiSz*0.5}px">${g.emoji||'📁'}</div>
+        <div>
+          <div class="nh-name" style="font-size:${fontSize}px">${esc(g.name)}</div>
+          ${g.desc?`<div class="nh-desc" style="font-size:${descSize}px">${esc(g.desc)}</div>`:''}
+        </div>
       </div>
-      <div class="sg-right"><span class="sg-count">${res.length}</span>
-        ${isOwner?`<div class="sg-acts" onclick="event.stopPropagation()">
-          <button class="btn btn-ghost" style="padding:3px 6px;font-size:11px" onclick="openGroupModal(${sg.id})">✏️</button>
-          <button class="btn btn-ghost" style="padding:3px 6px;font-size:11px" onclick="deleteGroup(${sg.id})">🗑️</button>
+      <div class="nh-right">
+        <span class="nh-count" style="font-size:${countSz}px;padding:${countPad}">${totalCount}</span>
+        ${isOwner?`<div class="nh-acts" onclick="event.stopPropagation()">
+          <button class="btn btn-ghost" style="padding:${btnPad};font-size:${btnSize}" onclick="openGroupModal(${g.id})">✏️</button>
+          <button class="btn btn-ghost" style="padding:${btnPad};font-size:${btnSize}" onclick="deleteGroup(${g.id})">🗑️</button>
         </div>`:''}
-        <span class="sg-chevron">›</span>
+        <span class="nh-chevron" style="font-size:${chevSz}">›</span>
       </div>
     </div>
-    <div class="subgroup-body">
-      ${res.length
-        ? `<div class="cards-grid">${res.map(cardHTML).join('')}</div>`
-        : `<div class="empty-group" style="padding:16px">No resources. <a href="#" onclick="openResourceModal(null,${sg.id});return false">Add one →</a></div>`}
-    </div>
+    <div class="${bodyCls}" style="padding:${bodyPad}">${bodyContent}</div>
   </div>`;
 }
 
@@ -751,14 +767,12 @@ function toggleGroup(id) {
   scheduleSave();
 }
 function deleteGroup(id) {
-  const g = vault.groups.find(x=>x.id===id);
-  const isParent = vault.groups.some(x=>x.parentId===id);
-  const msg = isParent
-    ? 'Delete this group and all its subgroups? Resources will become ungrouped.'
+  const toRemove = new Set(getAllDescendantIds(id));
+  const hasChildren = toRemove.size > 1;
+  const msg = hasChildren
+    ? `Delete this group and all ${toRemove.size-1} nested subgroup(s)? Resources will become ungrouped.`
     : 'Delete this group? Resources will become ungrouped.';
   if(!confirm(msg)) return;
-  // Collect IDs to remove (group + any subgroups)
-  const toRemove = new Set([id, ...vault.groups.filter(x=>x.parentId===id).map(x=>x.id)]);
   vault.resources.forEach(r=>{ if(toRemove.has(r.groupId)) r.groupId=null; });
   vault.groups=vault.groups.filter(g=>!toRemove.has(g.id));
   scheduleSave(); renderContent(); toast('🗑️ Group deleted','ok');
@@ -801,11 +815,20 @@ function openGroupModal(id=null, presetParentId=null) {
   document.getElementById('emojiPicker').innerHTML=EMOJIS.map(e=>
     `<span class="e-opt ${(g?.emoji===e||(!g&&e==='📁'))?'picked':''}" onclick="pickEmoji(this)">${e}</span>`
   ).join('');
-  // Populate parent dropdown — only top-level groups can be parents
-  const topGroups = vault.groups.filter(x=>!x.parentId && x.id !== id);
+  // Build parent dropdown — any group can be a parent, shown with indentation
   const sel = document.getElementById('gParent');
-  sel.innerHTML = '<option value="">— None (top-level group) —</option>' +
-    topGroups.map(tg=>`<option value="${tg.id}" ${(g?.parentId===tg.id||(presetParentId===tg.id&&!g))?'selected':''}>${esc(tg.emoji||'📁')} ${esc(tg.name)}</option>`).join('');
+  // Get all descendant IDs of the group being edited (can't nest inside own children)
+  const ownDescendants = id ? new Set(getAllDescendantIds(id)) : new Set();
+  function buildParentOpts(groups, parentId, depth) {
+    return groups.filter(x=>x.parentId===(parentId||null) && !ownDescendants.has(x.id)).map(x=>{
+      const indent = '   '.repeat(depth);
+      const arrow = depth > 0 ? '↳ ' : '';
+      const selected = (g?.parentId===x.id||(presetParentId===x.id&&!g)) ? 'selected' : '';
+      return `<option value="${x.id}" ${selected}>${indent}${arrow}${esc(x.emoji||'📁')} ${esc(x.name)}</option>`
+        + buildParentOpts(groups, x.id, depth+1);
+    }).join('');
+  }
+  sel.innerHTML = '<option value="">— None (top-level group) —</option>' + buildParentOpts(vault.groups, null, 0);
   showModal('groupModal'); setTimeout(()=>document.getElementById('gName').focus(),80);
 }
 function pickEmoji(el) { document.querySelectorAll('.e-opt').forEach(x=>x.classList.remove('picked')); el.classList.add('picked'); }
@@ -841,16 +864,17 @@ function openResourceModal(id=null,groupId=null) {
   document.getElementById('uploadProgress').style.display='none';
   document.getElementById('uploadBar').style.width='0%';
   const sel=document.getElementById('rGroup');
-  // Build grouped options: top-level first, then their subgroups indented
-  const topGs = vault.groups.filter(g=>!g.parentId);
-  let opts = '<option value="">— No Group —</option>';
-  topGs.forEach(tg => {
-    opts += `<option value="${tg.id}" ${(r?.groupId===tg.id||(!r&&groupId===tg.id))?'selected':''}>${esc(tg.emoji||'📁')} ${esc(tg.name)}</option>`;
-    vault.groups.filter(sg=>sg.parentId===tg.id).forEach(sg => {
-      opts += `<option value="${sg.id}" ${(r?.groupId===sg.id||(!r&&groupId===sg.id))?'selected':''}>&nbsp;&nbsp;&nbsp;↳ ${esc(sg.emoji||'📁')} ${esc(sg.name)}</option>`;
-    });
-  });
-  sel.innerHTML = opts;
+  // Build group tree dropdown with full infinite nesting indentation
+  function buildGroupOpts(parentId, depth) {
+    return vault.groups.filter(g=>g.parentId===(parentId||null)).map(g=>{
+      const indent = '   '.repeat(depth);
+      const arrow = depth > 0 ? '↳ ' : '';
+      const sel2 = (r?.groupId===g.id||(!r&&groupId===g.id)) ? 'selected' : '';
+      return `<option value="${g.id}" ${sel2}>${indent}${arrow}${esc(g.emoji||'📁')} ${esc(g.name)}</option>`
+        + buildGroupOpts(g.id, depth+1);
+    }).join('');
+  }
+  sel.innerHTML = '<option value="">— No Group —</option>' + buildGroupOpts(null, 0);
   setResType(r?.type||'link');
   showModal('resourceModal'); setTimeout(()=>document.getElementById('rName').focus(),80);
 }
