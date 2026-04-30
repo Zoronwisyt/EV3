@@ -880,22 +880,27 @@ function openResourceModal(id=null,groupId=null) {
   document.getElementById('rName').value=r?.name||'';
   document.getElementById('rDesc').value=r?.desc||'';
   document.getElementById('rUrl').value=r?.url||'';
-  document.getElementById('fileChosen').textContent=r?.fileName||'';
-  document.getElementById('dropLabel').textContent='Drop a file or click to browse';
+  document.getElementById('fileChosen').textContent=r?.fileName?`${r.fileName} (already uploaded)`:'';
+  document.getElementById('dropLabel').textContent=r?.fileName?'Upload a replacement file (optional)':'Drop a file or click to browse';
   document.getElementById('uploadProgress').style.display='none';
   document.getElementById('uploadBar').style.width='0%';
+
+  // Build group dropdown with full recursive tree
   const sel=document.getElementById('rGroup');
-  // Build group tree dropdown with full infinite nesting indentation
   function buildGroupOpts(parentId, depth) {
-    return vault.groups.filter(g=>g.parentId===(parentId||null)).map(g=>{
-      const indent = '   '.repeat(depth);
-      const arrow = depth > 0 ? '↳ ' : '';
-      const sel2 = (r?.groupId===g.id||(!r&&groupId===g.id)) ? 'selected' : '';
-      return `<option value="${g.id}" ${sel2}>${indent}${arrow}${esc(g.emoji||'📁')} ${esc(g.name)}</option>`
+    return vault.groups.filter(g=>(g.parentId||null)===(parentId||null)).map(g=>{
+      const indent='   '.repeat(depth);
+      const arrow=depth>0?'↳ ':'';
+      return `<option value="${g.id}">${indent}${arrow}${esc(g.emoji||'📁')} ${esc(g.name)}</option>`
         + buildGroupOpts(g.id, depth+1);
     }).join('');
   }
-  sel.innerHTML = '<option value="">— No Group —</option>' + buildGroupOpts(null, 0);
+  sel.innerHTML='<option value="">— No Group —</option>'+buildGroupOpts(null,0);
+
+  // Explicitly set value AFTER innerHTML so browser picks it up correctly
+  const targetGroup = r ? (r.groupId != null ? r.groupId : '') : (groupId != null ? groupId : '');
+  sel.value = String(targetGroup);
+
   setResType(r?.type||'link');
   showModal('resourceModal'); setTimeout(()=>document.getElementById('rName').focus(),80);
 }
@@ -923,7 +928,8 @@ async function saveResource() {
   if(curType==='file'&&!selFile&&!editRid){toast('⚠️ Please select a file','err');return;}
 
   const desc=document.getElementById('rDesc').value.trim();
-  const groupId=parseInt(document.getElementById('rGroup').value)||null;
+  const _gval=document.getElementById('rGroup').value;
+  const groupId=_gval!==''?Number(_gval):null;
   const btn=document.getElementById('saveResBtn');
   btn.disabled=true; btn.textContent='Saving…';
 
