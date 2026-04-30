@@ -823,12 +823,13 @@ function openGroupModal(id=null, presetParentId=null) {
     return groups.filter(x=>x.parentId===(parentId||null) && !ownDescendants.has(x.id)).map(x=>{
       const indent = '   '.repeat(depth);
       const arrow = depth > 0 ? '↳ ' : '';
-      const selected = (g?.parentId===x.id||(presetParentId===x.id&&!g)) ? 'selected' : '';
-      return `<option value="${x.id}" ${selected}>${indent}${arrow}${esc(x.emoji||'📁')} ${esc(x.name)}</option>`
+      return `<option value="${x.id}">${indent}${arrow}${esc(x.emoji||'📁')} ${esc(x.name)}</option>`
         + buildParentOpts(groups, x.id, depth+1);
     }).join('');
   }
   sel.innerHTML = '<option value="">— None (top-level group) —</option>' + buildParentOpts(vault.groups, null, 0);
+  // Set value explicitly after innerHTML so browser registers selection correctly
+  sel.value = String(g ? (g.parentId || '') : (presetParentId || ''));
   showModal('groupModal'); setTimeout(()=>document.getElementById('gName').focus(),80);
 }
 function pickEmoji(el) { document.querySelectorAll('.e-opt').forEach(x=>x.classList.remove('picked')); el.classList.add('picked'); }
@@ -837,7 +838,8 @@ function saveGroup() {
   if(!name){toast('⚠️ Name required','err');return;}
   const desc=document.getElementById('gDesc').value.trim();
   const emoji=document.querySelector('.e-opt.picked')?.textContent||'📁';
-  const parentId=parseInt(document.getElementById('gParent').value)||null;
+  const _pval = document.getElementById('gParent').value;
+  const parentId = _pval ? (Number(_pval) || _pval) : null;
   if(editGid){
     const g=vault.groups.find(x=>x.id===editGid);
     if(g)Object.assign(g,{name,desc,emoji,parentId});
