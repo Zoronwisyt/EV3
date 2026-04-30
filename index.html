@@ -444,7 +444,8 @@ let isOwner  = false;
 let curType  = 'link';
 let editGid  = null;
 let editRid  = null;
-let selFile  = null;   // File object
+let selFile  = null;
+let _presetParentId = null;  // stores parent when clicking '+ Subgroup'   // File object
 
 function getOwnedIds() { try { return JSON.parse(localStorage.getItem('ev_owned')||'[]'); } catch { return []; } }
 function markOwned(id) { const a=getOwnedIds().filter(x=>x!==id); a.unshift(id); localStorage.setItem('ev_owned',JSON.stringify(a.slice(0,30))); }
@@ -807,49 +808,67 @@ function goHome() {
 //  GROUP MODAL
 // ═══════════════════════════════════════════════════
 function openGroupModal(id=null, presetParentId=null) {
-  editGid=id;
-  const g=id?vault.groups.find(x=>x.id===id):null;
-  document.getElementById('gmTitle').textContent=id?'Edit Group':'New Group';
-  document.getElementById('gName').value=g?.name||'';
-  document.getElementById('gDesc').value=g?.desc||'';
-  document.getElementById('emojiPicker').innerHTML=EMOJIS.map(e=>
+  editGid = id;
+  _presetParentId = presetParentId;
+  const g = id ? vault.groups.find(x=>x.id===id) : null;
+  document.getElementById('gmTitle').textContent = id ? 'Edit Group' : 'New Group';
+  document.getElementById('gName').value = g?.name || '';
+  document.getElementById('gDesc').value = g?.desc || '';
+  document.getElementById('emojiPicker').innerHTML = EMOJIS.map(e=>
     `<span class="e-opt ${(g?.emoji===e||(!g&&e==='📁'))?'picked':''}" onclick="pickEmoji(this)">${e}</span>`
   ).join('');
-  // Build parent dropdown — any group can be a parent, shown with indentation
+
+  // Build parent dropdown recursively
   const sel = document.getElementById('gParent');
-  // Get all descendant IDs of the group being edited (can't nest inside own children)
   const ownDescendants = id ? new Set(getAllDescendantIds(id)) : new Set();
-  function buildParentOpts(groups, parentId, depth) {
-    return groups.filter(x=>x.parentId===(parentId||null) && !ownDescendants.has(x.id)).map(x=>{
-      const indent = '   '.repeat(depth);
-      const arrow = depth > 0 ? '↳ ' : '';
-      return `<option value="${x.id}">${indent}${arrow}${esc(x.emoji||'📁')} ${esc(x.name)}</option>`
-        + buildParentOpts(groups, x.id, depth+1);
-    }).join('');
+  function buildOpts(parentId, depth) {
+    return vault.groups
+      .filter(x => (x.parentId || null) === (parentId || null) && !ownDescendants.has(x.id))
+      .map(x => {
+        const indent = '\u00a0\u00a0\u00a0'.repeat(depth);
+        const arrow = depth > 0 ? '\u21b3 ' : '';
+        return `<option value="${x.id}">${indent}${arrow}${esc(x.emoji||'📁')} ${esc(x.name)}</option>`
+          + buildOpts(x.id, depth + 1);
+      }).join('');
   }
-  sel.innerHTML = '<option value="">— None (top-level group) —</option>' + buildParentOpts(vault.groups, null, 0);
-  // Set value explicitly after innerHTML so browser registers selection correctly
-  sel.value = String(g ? (g.parentId || '') : (presetParentId || ''));
-  showModal('groupModal'); setTimeout(()=>document.getElementById('gName').focus(),80);
+  sel.innerHTML = '<option value="">— None (top-level group) —</option>' + buildOpts(null, 0);
+
+  // Pre-select the correct parent
+  const target = g ? (g.parentId != null ? g.parentId : '') : (presetParentId != null ? presetParentId : '');
+  sel.value = String(target);
+
+  showModal('groupModal');
+  setTimeout(() => document.getElementById('gName').focus(), 80);
 }
 function pickEmoji(el) { document.querySelectorAll('.e-opt').forEach(x=>x.classList.remove('picked')); el.classList.add('picked'); }
 function saveGroup() {
-  const name=document.getElementById('gName').value.trim();
-  if(!name){toast('⚠️ Name required','err');return;}
-  const desc=document.getElementById('gDesc').value.trim();
-  const emoji=document.querySelector('.e-opt.picked')?.textContent||'📁';
-  const _pval = document.getElementById('gParent').value;
-  const parentId = _pval ? (Number(_pval) || _pval) : null;
-  if(editGid){
-    const g=vault.groups.find(x=>x.id===editGid);
-    if(g)Object.assign(g,{name,desc,emoji,parentId});
-    toast('✅ Group updated','ok');
-  } else {
-    vault.groups.push({id:vault.nextId++,name,desc,emoji,parentId,collapsed:false});
-    toast('✅ Group created','ok');
+  const name = document.getElementById('gName').value.trim();
+  if (!name) { toast('⚠️ Name required', 'err'); return; }
+  const desc  = document.getElementById('gDesc').value.trim();
+  const emoji = document.querySelector('.e-opt.picked')?.textContent || '📁';
+
+  // Read dropdown — if empty string, fall back to _presetParentId (set when clicking + Subgroup)
+  const selVal = document.getElementById('gParent').value;
+  let parentId = null;
+  if (selVal !== '' && selVal !== null && selVal !== undefined) {
+    parentId = Number(selVal);
+  } else if (!editGid && _presetParentId != null) {
+    // Dropdown failed to hold the value (browser quirk) — use the stored preset
+    parentId = _presetParentId;
   }
+
+  if (editGid) {
+    const g = vault.groups.find(x => x.id === editGid);
+    if (g) Object.assign(g, { name, desc, emoji, parentId });
+    toast('✅ Group updated', 'ok');
+  } else {
+    vault.groups.push({ id: vault.nextId++, name, desc, emoji, parentId, collapsed: false });
+    toast('✅ Group created', 'ok');
+  }
+  _presetParentId = null;
   closeModal('groupModal'); scheduleSave(); renderContent();
 }
+
 
 // ═══════════════════════════════════════════════════
 //  RESOURCE MODAL
