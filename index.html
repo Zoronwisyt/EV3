@@ -169,6 +169,16 @@ header { display: flex; align-items: center; justify-content: space-between; pad
 .add-sub-btn { display: flex; align-items: center; gap: 6px; color: var(--muted); background: transparent; border: 1px dashed var(--border); border-radius: 8px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 500; transition: all 0.15s; width: 100%; justify-content: center; }
 .add-sub-btn:hover { color: var(--accent2); border-color: var(--accent2); background: rgba(109,74,255,0.05); }
 
+/* STORAGE BAR */
+.storage-bar-wrap { margin-bottom: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.storage-bar-top { display: flex; align-items: center; justify-content: space-between; }
+.storage-bar-label { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.storage-bar-label strong { color: var(--text); }
+.storage-bar-pct { font-size: 11px; font-weight: 600; color: var(--muted); }
+.storage-track { height: 6px; background: var(--surface3); border-radius: 99px; overflow: hidden; }
+.storage-fill { height: 100%; border-radius: 99px; transition: width 0.6s ease; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+.storage-fill.warn { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+
 /* MODAL */
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(8px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; animation: fadeIn 0.15s ease; }
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
@@ -296,6 +306,7 @@ header { display: flex; align-items: center; justify-content: space-between; pad
       </div>
       <div id="toolbarExtra"></div>
     </div>
+    <div id="storageBar"></div>
     <div id="vaultContent"></div>
   </div>
 </div>
@@ -564,7 +575,7 @@ function openVault(v, owner) {
   history.replaceState({},'',(url));
   document.getElementById('landing').style.display='none';
   document.getElementById('vault').style.display='block';
-  renderChrome(); renderContent();
+  renderChrome(); renderContent(); renderStorageBar();
 }
 
 function renderChrome() {
@@ -962,7 +973,7 @@ async function saveResource() {
       });
       toast('✅ Resource added','ok');
     }
-    closeModal('resourceModal'); scheduleSave(); renderContent();
+    closeModal('resourceModal'); scheduleSave(); renderContent(); renderStorageBar();
   } catch(e) { toast('❌ '+e.message,'err'); }
   finally { btn.disabled=false; btn.textContent='Save Resource'; }
 }
@@ -986,6 +997,64 @@ function copyShareLink() {
 }
 function copyVaultId() {
   navigator.clipboard.writeText(vault.id).then(()=>toast('✅ Vault ID copied!','ok'));
+}
+
+// ═══════════════════════════════════════════════════
+//  STORAGE USAGE
+// ═══════════════════════════════════════════════════
+const STORAGE_LIMIT_BYTES = 1 * 1024 * 1024 * 1024; // 1 GB
+
+async function fetchStorageUsage() {
+  try {
+    // List all files in the bucket
+    const res = await fetch(`${SUPA_URL}/storage/v1/object/list/${BUCKET}`, {
+      method: 'POST',
+      headers: { ...H, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prefix: '', limit: 10000, offset: 0 })
+    });
+    if (!res.ok) return null;
+    const files = await res.json();
+    const totalBytes = files.reduce((acc, f) => acc + (f.metadata?.size || 0), 0);
+    return totalBytes;
+  } catch { return null; }
+}
+
+function formatBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+  if (b < 1024 * 1024 * 1024) return (b / (1024 * 1024)).toFixed(1) + ' MB';
+  return (b / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+}
+
+async function renderStorageBar() {
+  const el = document.getElementById('storageBar');
+  if (!el) return;
+
+  // Show loading state
+  el.innerHTML = `<div class="storage-bar-wrap">
+    <div class="storage-bar-top">
+      <span class="storage-bar-label">☁️ Storage</span>
+      <span class="storage-bar-pct" style="opacity:0.4">Calculating…</span>
+    </div>
+    <div class="storage-track"><div class="storage-fill" style="width:0%"></div></div>
+  </div>`;
+
+  const used = await fetchStorageUsage();
+  if (used === null) { el.innerHTML = ''; return; }
+
+  const pct = Math.min((used / STORAGE_LIMIT_BYTES) * 100, 100);
+  const isWarn = pct > 75;
+  const pctDisplay = pct < 0.1 ? '<0.1' : pct.toFixed(1);
+
+  el.innerHTML = `<div class="storage-bar-wrap">
+    <div class="storage-bar-top">
+      <span class="storage-bar-label">☁️ Storage &nbsp;·&nbsp; <strong>${formatBytes(used)}</strong> of 1 GB used</span>
+      <span class="storage-bar-pct" style="color:${isWarn?'#f59e0b':'var(--muted)'}">${pctDisplay}%</span>
+    </div>
+    <div class="storage-track">
+      <div class="storage-fill ${isWarn?'warn':''}" style="width:${pct}%"></div>
+    </div>
+  </div>`;
 }
 
 // ═══════════════════════════════════════════════════
